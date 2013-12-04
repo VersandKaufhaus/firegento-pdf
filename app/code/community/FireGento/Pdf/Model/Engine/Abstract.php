@@ -41,6 +41,11 @@ abstract class FireGento_Pdf_Model_Engine_Abstract extends Mage_Sales_Model_Orde
 
     protected $imprint;
 
+    /**
+     * @var int correct all y values if the logo is full width and bigger
+     */
+    protected $_marginTop = 0;
+
     public function __construct()
     {
         parent::__construct();
@@ -211,6 +216,26 @@ abstract class FireGento_Pdf_Model_Engine_Abstract extends Mage_Sales_Model_Orde
      */
     protected function insertLogo(&$page, $store = null)
     {
+        if ($this->_isLogoFullWidth($store)) {
+            $this->_insertLogoFullWidth($page, $store = null);
+        } else {
+            $this->_insertLogoPositioned($page, $store = null);
+        }
+    }
+
+    protected function _isLogoFullWidth($store)
+    {
+        return Mage::helper('firegento_pdf')->isLogoFullWidth($store);
+    }
+
+    /**
+     * inserts the logo if it is positioned left, center or right
+     *
+     * @param      $page
+     * @param null $store
+     */
+    protected function _insertLogoPositioned(&$page, $store = null)
+    {
         $maxwidth = ($this->margin['right'] - $this->margin['left']);
         $maxheight = 100;
 
@@ -242,6 +267,52 @@ abstract class FireGento_Pdf_Model_Engine_Abstract extends Mage_Sales_Model_Orde
                 $position['y2'] = $position['y1'] + $height;
 
                 $page->drawImage($image, $position['x1'], $position['y1'], $position['x2'], $position['y2']);
+            }
+        }
+    }
+
+    /**
+     * inserts the logo from complete left to right
+     *
+     * @param      $page
+     * @param null $store
+     *
+     * @todo merge _insertLogoPositioned and _insertLogoFullWidth
+     */
+    protected function _insertLogoFullWidth(&$page, $store = null)
+    {
+        $maxwidth = 594;
+        $maxheight = 300;
+
+        $image = Mage::getStoreConfig('sales/identity/logo', $store);
+        if ($image and file_exists(Mage::getBaseDir('media', $store) . '/sales/store/logo/' . $image)) {
+            $image = Mage::getBaseDir('media', $store) . '/sales/store/logo/' . $image;
+
+            list ($width, $height) = Mage::helper('firegento_pdf')->getScaledImageSize($image, $maxwidth, $maxheight);
+
+            if (is_file($image)) {
+                $image = Zend_Pdf_Image::imageWithPath($image);
+
+                $logoPosition = Mage::getStoreConfig('sales_pdf/firegento_pdf/logo_position', $store);
+
+                switch ($logoPosition) {
+                    case 'center':
+                        $startLogoAt = $this->margin['left'] + (($this->margin['right'] - $this->margin['left']) / 2) - $width / 2;
+                        break;
+                    case 'right':
+                        $startLogoAt = $this->margin['right'] - $width;
+                        break;
+                    default:
+                        $startLogoAt = 0;
+                }
+
+                $position['x1'] = $startLogoAt;
+                $position['y1'] = 663;
+                $position['x2'] = $position['x1'] + $width;
+                $position['y2'] = $position['y1'] + $height;
+
+                $page->drawImage($image, $position['x1'], $position['y1'], $position['x2'], $position['y2']);
+                $this->_marginTop = $height - 130;
             }
         }
     }
