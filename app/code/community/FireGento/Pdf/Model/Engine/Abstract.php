@@ -247,6 +247,35 @@ abstract class FireGento_Pdf_Model_Engine_Abstract extends Mage_Sales_Model_Orde
     }
 
     /**
+     * @param Zend_Pdf_Page              $page
+     * @param Mage_Sales_Model_Abstract $source
+     * @param Mage_Sales_Model_Order     $order
+     */
+    protected function insertAddressesAndHeader(Zend_Pdf_Page $page, Mage_Sales_Model_Abstract $source, Mage_Sales_Model_Order $order)
+    {
+        // Add logo
+        $this->insertLogo($page, $source->getStore());
+
+        // Add billing address
+        $this->y = 692 - $this->_marginTop;
+        $this->insertBillingAddress($page, $order);
+
+        // Add sender address
+        $this->y = 705 - $this->_marginTop;
+        $this->_insertSenderAddessBar($page);
+
+        // Add head
+        $this->y = 592 - $this->_marginTop;
+        $this->insertHeader($page, $order, $source);
+
+        /* Add table head */
+        // make sure that item table does not overlap heading
+        if ($this->y > 575 - $this->_marginTop) {
+            $this->y = 575 - $this->_marginTop;
+        }
+    }
+
+    /**
      * Insert billing address
      *
      * @param object $page Current page object of Zend_Pdf
